@@ -1,0 +1,27 @@
+{
+  "version": "1.0",
+  "slideCount": 2,
+  "slideSizePx": [1280, 720],
+  "positionTolerancePx": 2,
+  "coreObjects": [
+    { "slide": 1, "name": "slide-1-title", "kind": "textbox", "bbox": [48, 68, 1184, 64] },
+    { "slide": 1, "name": "slide-1-subtitle", "kind": "textbox", "bbox": [48, 136, 1184, 34] },
+    { "slide": 1, "name": "slide-1-kpi-panel-1", "kind": "shape", "bbox": [48, 210, 376, 118] },
+    { "slide": 1, "name": "slide-1-kpi-panel-2", "kind": "shape", "bbox": [452, 210, 376, 118] },
+    { "slide": 1, "name": "slide-1-kpi-panel-3", "kind": "shape", "bbox": [856, 210, 376, 118] },
+    { "slide": 1, "name": "Chart", "kind": "chart", "bbox": [48, 342, 580, 300] },
+    { "slide": 1, "name": "slide-1-project-work-table", "kind": "table", "bbox": [660, 400, 560, 219.8] },
+    { "slide": 1, "name": "slide-1-footer", "kind": "textbox", "bbox": [48, 646, 1120, 52] },
+    { "slide": 2, "name": "slide-2-case-panel", "kind": "shape", "bbox": [48, 160, 1184, 190] },
+    { "slide": 2, "name": "slide-2-value-panel-1", "kind": "shape", "bbox": [48, 382, 376, 214] },
+    { "slide": 2, "name": "slide-2-value-panel-2", "kind": "shape", "bbox": [452, 382, 376, 214] },
+    { "slide": 2, "name": "slide-2-value-panel-3", "kind": "shape", "bbox": [856, 382, 376, 214] },
+    { "slide": 2, "name": "slide-2-value-title-2", "kind": "textbox", "bbox": [464, 400, 352, 38] },
+    { "slide": 2, "name": "slide-2-value-title-3", "kind": "textbox", "bbox": [884, 400, 320, 38] },
+    { "slide": 2, "name": "slide-2-next-step", "kind": "textbox", "bbox": [48, 626, 1130, 34] }
+  ],
+  "validationPolicy": {
+    "fatal": ["unreadable-pptx", "wrong-slide-count", "missing-core-object", "missing-chart", "missing-table"],
+    "warning": ["position-drift", "text-overflow", "minor-style-difference"]
+  }
+}

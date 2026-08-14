@@ -1,0 +1,17 @@
+# Personal reports and local analysis outputs
+reports/*
+!reports/.gitkeep
+work/
+output/
+outputs/
+*.inspect.ndjson
+report-data*.json
+evidence*.json
+
+# Local Codex session exports must never be committed
+sessions/
+*.jsonl
+
+# Operating-system files
+Thumbs.db
+.DS_Store
