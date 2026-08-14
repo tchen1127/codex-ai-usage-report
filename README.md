@@ -6,7 +6,7 @@
 
 ## 最簡單的使用方式
 
-1. 從 GitHub 選擇 **Code → Download ZIP**。
+1. 開啟 [tchen1127/codex-ai-usage-report](https://github.com/tchen1127/codex-ai-usage-report)，選擇 **Code → Download ZIP**。
 2. 解壓縮到一個新的資料夾。
 3. 用 Codex 開啟該資料夾。
 4. 在新的 Codex Task 輸入：
@@ -28,6 +28,12 @@ Codex 會自動讀取根目錄的 `AGENTS.md`，使用 Repository 內的 `.agent
 
 ```text
 請讀取 START_AI_REPORT.md，安裝 Skill 並開始製作我的 AI 工作報告。
+```
+
+若要讓 Codex 直接取得 GitHub 版本，可以貼上：
+
+```text
+請從 https://github.com/tchen1127/codex-ai-usage-report 下載到新的專案資料夾，閱讀 START_AI_REPORT.md，安裝 Skill 並開始製作我的 AI 工作報告。
 ```
 
 ## 為什麼下載後就能使用
