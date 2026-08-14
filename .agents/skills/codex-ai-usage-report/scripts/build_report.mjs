@@ -294,6 +294,7 @@ async function main() {
   const categoryNote = categories.map((item) => `${item.name} ${item.count}`).join("、");
   slide1.speakerNotes.textFrame.setText(
     `統計期間：${periodStart}–${periodEnd}（${data.period?.timezone || "Asia/Taipei"}）。
+統計單位：目前 Windows 使用者／員工；同一資料範圍內的多個 Codex 登入帳號合併統計，不作帳號別拆分。
 樣本狀態：${mode}；AI 工作紀錄 ${workCount} 筆、專案群組 ${projectCount} 個。
 分類：${categoryNote}。
 Token：${exactNumber(totalTokens)}，包含 Codex 回報的 Cached Input；供部門額度規劃，不等同帳單金額。

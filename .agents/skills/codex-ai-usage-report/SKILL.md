@@ -15,7 +15,8 @@ description: 自動分析指定日期區間的本機 Codex 工作 session，整�
 - 日期接受 `YYYY/MM/DD` 或 `YYYY-MM-DD`，首尾日都納入；時區固定 `Asia/Taipei`，部門固定 `研發部`。
 - 固定只分析本機 Codex session；排除 ChatGPT/GPT 聊天與非工作使用。
 - 預設只分析目前 Windows 使用者的 `%USERPROFILE%/.codex`，或目前生效的 `CODEX_HOME`；不得自動掃描其他 Windows 使用者資料夾。
-- 若多人共用同一個 Windows 帳號，或同一個 `.codex` 內混有多個登入身分，需先提醒可能無法可靠分離紀錄，不得宣稱結果只屬於單一員工。
+- 同一位員工的個人電腦與 Windows 帳號內，即使曾使用多個 Codex 登入帳號，也合併為同一份員工報告；不作帳號別拆分。Token 代表這位員工在本機資料範圍內的合計，不代表單一訂閱帳號的帳單或額度。
+- 只有在 Windows 帳號或 `.codex` 曾由不同人共用時，才停止自動報告並要求隔離資料來源，避免混入其他員工紀錄。
 
 ## 必讀規範
 

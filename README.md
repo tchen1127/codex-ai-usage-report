@@ -49,7 +49,7 @@ Codex 會自動尋找 Repository 內的 `.agents/skills`，因此開啟本資料
 
 本 Repository 本身不含員工資料。執行 Skill 後產生的報告屬於個人工作資料，請先檢查內容再交付；不要把 `reports/` 內的個人報告 Commit 或 Push 到 GitHub。
 
-Skill 預設只讀取目前 Windows 使用者的 `%USERPROFILE%\.codex`，或目前生效的 `CODEX_HOME`，不會自動掃描其他 Windows 使用者。若多人共用同一個 Windows 帳號，或同一個 `.codex` 內曾混用多個登入身分，紀錄可能無法可靠分離，請先停止並改用個別的 Windows 使用者或 `CODEX_HOME`。
+Skill 預設只讀取目前 Windows 使用者的 `%USERPROFILE%\.codex`，或目前生效的 `CODEX_HOME`，不會自動掃描其他 Windows 使用者。同一位員工即使在這個資料範圍內使用多個 Codex 登入帳號，也會合併成一份員工報告，不作帳號別拆分；Token 是合計值，不代表單一訂閱帳號的帳單或額度。只有在 Windows 帳號或 `.codex` 曾由不同人共用時，才應停止並改用隔離的 Windows 使用者或 `CODEX_HOME`。
 
 ## 主要檔案
 
