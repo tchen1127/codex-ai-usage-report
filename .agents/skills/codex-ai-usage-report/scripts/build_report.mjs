@@ -252,14 +252,17 @@ async function main() {
   const series = chart.series.getItemAt(0);
   series.categories = categories.map((item) => item.name);
   series.values = workCount > 0 ? categories.map((item) => item.count) : [1, 1, 1, 1];
+  const categoryPercentages = categories.map((item) =>
+    workCount > 0 && item.count > 0 ? Math.round((item.count / workCount) * 100) : null,
+  );
+  const hasSmallSlice = categoryPercentages.some(
+    (percentage) => percentage != null && percentage <= 12,
+  );
+  chart.dataLabels.showLeaderLines = workCount > 0 && hasSmallSlice;
   for (let i = 0; i < 4; i += 1) {
+    const percentage = categoryPercentages[i];
     const override = series.dataLabelOverrides.add(i);
-    override.text =
-      workCount > 0
-        ? categories[i].count > 0
-          ? `${Math.round((categories[i].count / workCount) * 100)}%`
-          : " "
-        : "—";
+    override.text = percentage == null ? (workCount > 0 ? " " : "—") : `${percentage}% ${categories[i].name}`;
     override.showValue = false;
     override.showSeriesName = false;
     override.showCategoryName = false;
