@@ -42,6 +42,18 @@ Codex 會自動尋找 Repository 內的 `.agents/skills`，因此開啟本資料
 
 若個人目錄已有不同版本，安裝腳本會先備份到 `%USERPROFILE%\.agents\skill-backups`，不會直接刪除舊版本。
 
+## 更新已安裝版本
+
+1. 重新下載本 Repository 的 ZIP，或在既有 Git checkout 執行 `git pull`。
+2. 在 Repository 根目錄執行：
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\scripts\install-skill.ps1
+   ```
+
+3. 確認輸出包含 `STATUS=updated` 或 `STATUS=already-current`。
+4. 重新執行報告流程並產生新的 PPT；先前已產生的 PPT 不會自動套用新版圖表設定。
+
 ## 報告原則
 
 - 固定兩頁、固定風格，方便研發部門彙整。
