@@ -2,7 +2,7 @@
 
 本檔案記錄公開版本的重要功能與行為變更。版本號採用 Semantic Versioning。
 
-## Unreleased
+## v1.1.0 — 2026-08-17
 
 ### 新增
 

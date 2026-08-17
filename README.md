@@ -2,7 +2,7 @@
 
 使用本機 Codex 工作紀錄，自動產生格式一致的兩頁 AI 工作報告。
 
-目前版本：`v1.0.1`｜[版本變更記錄](CHANGELOG.md)
+目前版本：`v1.1.0`｜[版本變更記錄](CHANGELOG.md)
 
 本 Repository 只包含通用 Skill、空白 PowerPoint 模板與啟動工具，不包含任何員工個人範例、Token 數字、客戶名稱、公司專案名稱、原始 Prompt 或 Codex Session。
 
