@@ -8,6 +8,16 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const SKILL_DIR = path.resolve(SCRIPT_DIR, "..");
 const DEFAULT_TEMPLATE = path.join(SKILL_DIR, "assets", "rd-codex-ai-usage-report-template.pptx");
 const HASH_FILE = path.join(SKILL_DIR, "assets", "template.sha256");
+const AI_VALUE_DIMENSIONS = ["任務推進", "品質與查核", "可複用成果", "風險辨識", "工作效率提升"];
+const OBSERVATION_DIMENSIONS = [
+  "使用投入與持續性",
+  "任務廣度",
+  "任務深度與複雜度",
+  "成果與實務價值",
+  "品質、查核與風險意識",
+  "可複用性與成熟度",
+];
+const MATURITY_LEVELS = ["資料不足", "起步探索", "穩定應用", "成熟應用", "高度整合"];
 
 function parseArgs(argv) {
   const args = {};
@@ -53,6 +63,10 @@ function clip(value, maxChars) {
   return `${chars.slice(0, Math.max(1, maxChars - 1)).join("")}…`;
 }
 
+function charCount(value) {
+  return [...String(value || "").replace(/\s/g, "")].length;
+}
+
 function friendlySkillName(value) {
   const raw = String(value || "").trim();
   const key = raw.toLowerCase();
@@ -69,6 +83,21 @@ function friendlySkillName(value) {
   return aliases.get(key) || raw;
 }
 
+function normalizeScore(value) {
+  if (String(value ?? "").trim().toUpperCase() === "N/A") return "N/A";
+  if (typeof value !== "number" && typeof value !== "string") return null;
+  const trimmed = typeof value === "string" ? value.trim() : value;
+  if (typeof trimmed === "string" && !/^[1-5]$/.test(trimmed)) return null;
+  const number = Number(trimmed);
+  return Number.isInteger(number) && number >= 1 && number <= 5 ? number : null;
+}
+
+function scoreAverage(items, key) {
+  const scores = items.map((item) => item[key]).filter((value) => Number.isInteger(value));
+  if (!scores.length) return "N/A";
+  return `${(scores.reduce((sum, value) => sum + value, 0) / scores.length).toFixed(1)}／5`;
+}
+
 function bulletLines(values, maxLines, maxChars) {
   const lines = values
     .map((value) => String(value || "").replace(/^\s*[•\-*]\s*/, "").trim())
@@ -80,13 +109,16 @@ function bulletLines(values, maxLines, maxChars) {
 }
 
 function sampleModeFor(count, explicit) {
-  if (["general", "starter", "no-data"].includes(explicit)) return explicit;
-  if (count === 0) return "no-data";
-  return count < 10 ? "starter" : "general";
+  const expected = count === 0 ? "no-data" : count < 10 ? "starter" : "general";
+  if (explicit && explicit !== expected) {
+    throw new Error(`sampleMode ${explicit} does not match workRecordCount ${count}; expected ${expected}`);
+  }
+  return expected;
 }
 
 function validateData(data) {
   const errors = [];
+  if (data?.schemaVersion !== "2.0") errors.push("schemaVersion must be 2.0");
   if (!data?.employee?.englishName) errors.push("employee.englishName is required");
   if (!data?.employee?.chineseName) errors.push("employee.chineseName is required");
   const workCount = Number(data?.metrics?.workRecordCount);
@@ -100,6 +132,127 @@ function validateData(data) {
   const projectSum = projects.reduce((sum, item) => sum + (Number(item.workRecordCount) || 0), 0);
   if (Number.isFinite(workCount) && projectSum !== workCount) {
     errors.push(`project work-record sum ${projectSum} does not equal workRecordCount ${workCount}`);
+  }
+  const aiItems = Array.isArray(data?.aiValue?.items) ? data.aiValue.items : [];
+  if (aiItems.length !== AI_VALUE_DIMENSIONS.length) {
+    errors.push(`aiValue.items must contain exactly ${AI_VALUE_DIMENSIONS.length} items`);
+  }
+  if (new Set(aiItems.map((item) => item.name)).size !== aiItems.length) {
+    errors.push("aiValue.items contains duplicate dimension names");
+  }
+  const aiMap = new Map(aiItems.map((item) => [item.name, item]));
+  for (const name of AI_VALUE_DIMENSIONS) {
+    const item = aiMap.get(name);
+    if (!item) {
+      errors.push(`aiValue.items is missing ${name}`);
+      continue;
+    }
+    const aiScore = normalizeScore(item.aiEvidenceScore);
+    const selfScore = normalizeScore(item.selfScore);
+    if (aiScore == null) errors.push(`aiValue ${name}.aiEvidenceScore must be 1-5 or N/A`);
+    if (selfScore == null) errors.push(`aiValue ${name}.selfScore must be 1-5 or N/A`);
+    if (Number.isInteger(aiScore) && !String(item.evidence || "").trim()) {
+      errors.push(`aiValue ${name}.evidence is required when AI evidence score is numeric`);
+    }
+    if (workCount === 0 && aiScore !== "N/A") {
+      errors.push(`aiValue ${name}.aiEvidenceScore must be N/A when workRecordCount is 0`);
+    }
+    if (workCount === 0 && selfScore !== "N/A") {
+      errors.push(`aiValue ${name}.selfScore must be N/A when workRecordCount is 0`);
+    }
+  }
+  const observation = data?.aiComprehensiveObservation;
+  if (!observation || typeof observation !== "object" || Array.isArray(observation)) {
+    errors.push("aiComprehensiveObservation must be an object");
+  } else {
+    const status = observation.status;
+    if (!["evaluated", "insufficient-data"].includes(status)) {
+      errors.push("aiComprehensiveObservation.status must be evaluated or insufficient-data");
+    }
+    if (!MATURITY_LEVELS.includes(observation.maturityLevel)) {
+      errors.push(`aiComprehensiveObservation.maturityLevel must be one of ${MATURITY_LEVELS.join("、")}`);
+    }
+    if (status === "insufficient-data" && observation.maturityLevel !== "資料不足") {
+      errors.push("insufficient-data observation must use 資料不足 maturityLevel");
+    }
+    if (workCount === 0 && status !== "insufficient-data") {
+      errors.push("aiComprehensiveObservation.status must be insufficient-data when workRecordCount is 0");
+    }
+    if (workCount > 0 && status !== "evaluated") {
+      errors.push("aiComprehensiveObservation.status must be evaluated when workRecordCount is greater than 0");
+    }
+    const observationText = String(observation.observationText || "").trim();
+    const observationLength = charCount(observationText);
+    if (!observationText) {
+      errors.push("aiComprehensiveObservation.observationText is required");
+    } else if (status === "evaluated" && (observationLength < 90 || observationLength > 160)) {
+      errors.push("evaluated observationText must contain 90-160 non-whitespace characters");
+    } else if (status === "insufficient-data" && (observationLength < 20 || observationLength > 160)) {
+      errors.push("insufficient-data observationText must contain 20-160 non-whitespace characters");
+    }
+
+    const signals = observation.quantitativeSignals;
+    const recordsWithSkill = Number(data?.skills?.recordsWithSkill) || 0;
+    const expectedSignals = {
+      totalTokens: Number(data?.metrics?.totalTokens) || 0,
+      workRecordCount: Number.isFinite(workCount) ? workCount : 0,
+      activeDays: Number(data?.metrics?.activeDays) || 0,
+      eligibleDays: Number(data?.metrics?.eligibleDays) || 0,
+      activeMinutes: Number(data?.metrics?.activeMinutes) || 0,
+      projectGroupCount: Number(data?.metrics?.projectGroupCount) || 0,
+      skillCoverageRate: workCount > 0 ? Math.round((recordsWithSkill / workCount) * 100) : 0,
+    };
+    if (!signals || typeof signals !== "object" || Array.isArray(signals)) {
+      errors.push("aiComprehensiveObservation.quantitativeSignals must be an object");
+    } else {
+      for (const [key, expected] of Object.entries(expectedSignals)) {
+        if (typeof signals[key] !== "number" || !Number.isFinite(signals[key]) || signals[key] !== expected) {
+          errors.push(`aiComprehensiveObservation.quantitativeSignals.${key} must equal ${expected}`);
+        }
+      }
+    }
+
+    const assessments = Array.isArray(observation.dimensionAssessments)
+      ? observation.dimensionAssessments
+      : [];
+    if (assessments.length !== OBSERVATION_DIMENSIONS.length) {
+      errors.push(`aiComprehensiveObservation.dimensionAssessments must contain exactly ${OBSERVATION_DIMENSIONS.length} items`);
+    }
+    if (new Set(assessments.map((item) => item.name)).size !== assessments.length) {
+      errors.push("aiComprehensiveObservation.dimensionAssessments contains duplicate dimension names");
+    }
+    const assessmentMap = new Map(assessments.map((item) => [item.name, item]));
+    for (const name of OBSERVATION_DIMENSIONS) {
+      const item = assessmentMap.get(name);
+      if (!item) {
+        errors.push(`aiComprehensiveObservation.dimensionAssessments is missing ${name}`);
+        continue;
+      }
+      const score = normalizeScore(item.score);
+      if (score == null) errors.push(`aiComprehensiveObservation ${name}.score must be 1-5 or N/A`);
+      if (Number.isInteger(score) && !String(item.evidence || "").trim()) {
+        errors.push(`aiComprehensiveObservation ${name}.evidence is required when score is numeric`);
+      }
+      if (status === "insufficient-data" && score !== "N/A") {
+        errors.push(`aiComprehensiveObservation ${name}.score must be N/A when status is insufficient-data`);
+      }
+    }
+    if (status === "evaluated" && (!Array.isArray(observation.strengths) || !observation.strengths.some((item) => String(item || "").trim()))) {
+      errors.push("evaluated aiComprehensiveObservation.strengths must contain at least one item");
+    }
+    if (status === "evaluated" && !String(observation.improvement || "").trim()) {
+      errors.push("evaluated aiComprehensiveObservation.improvement is required");
+    }
+    if (!Array.isArray(observation.limitations)) {
+      errors.push("aiComprehensiveObservation.limitations must be an array");
+    }
+    if (observation.internalScore != null) {
+      if (status === "insufficient-data") {
+        errors.push("aiComprehensiveObservation.internalScore must be omitted when status is insufficient-data");
+      } else if (!Number.isInteger(observation.internalScore) || observation.internalScore < 0 || observation.internalScore > 100) {
+        errors.push("aiComprehensiveObservation.internalScore must be an integer from 0 to 100");
+      }
+    }
   }
   if (errors.length) throw new Error(`Invalid report-data.json:\n- ${errors.join("\n- ")}`);
 }
@@ -154,11 +307,11 @@ function categoryCounts(data) {
 }
 
 function normalizedAiItems(data) {
-  const fixed = ["任務推進", "品質與查核", "可複用成果", "風險辨識"];
   const map = new Map((data.aiValue?.items || []).map((item) => [item.name, item]));
-  return fixed.map((name) => ({
+  return AI_VALUE_DIMENSIONS.map((name) => ({
     name,
-    status: map.get(name)?.status || "資料累積中",
+    aiEvidenceScore: normalizeScore(map.get(name)?.aiEvidenceScore) ?? "N/A",
+    selfScore: normalizeScore(map.get(name)?.selfScore) ?? "N/A",
     evidence: map.get(name)?.evidence || "",
   }));
 }
@@ -166,13 +319,18 @@ function normalizedAiItems(data) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.data) throw new Error("--data is required.");
-  if (!args.output) throw new Error("--output is required.");
   const dataPath = path.resolve(String(args.data));
+  const data = JSON.parse(await fs.readFile(dataPath, "utf8"));
+  validateData(data);
+  sampleModeFor(Number(data.metrics.workRecordCount), data.sampleMode);
+  if (args["validate-data-only"]) {
+    console.log(JSON.stringify({ status: "valid", data: dataPath }, null, 2));
+    return;
+  }
+  if (!args.output) throw new Error("--output is required unless --validate-data-only is used.");
   const templatePath = path.resolve(String(args.template || DEFAULT_TEMPLATE));
   const outputPath = path.resolve(String(args.output));
   const qaDir = path.resolve(String(args["qa-dir"] || path.join(path.dirname(outputPath), "qa")));
-  const data = JSON.parse(await fs.readFile(dataPath, "utf8"));
-  validateData(data);
 
   const warnings = [];
   if (templatePath === path.resolve(DEFAULT_TEMPLATE)) {
@@ -244,6 +402,7 @@ async function main() {
     `※ 本報告供個人 AI 應用與績效考核參考之一；不作為單一判定或員工排名${sampleNote}。\n` +
       `資料來源：Codex 本機工作 session｜Token 供部門額度規劃｜快照：${displayEnd}`,
   );
+  await rewrite(presentation, index, "slide-1-chart-title", "工作分類｜AI 工作紀錄分布");
 
   const categories = categoryCounts(data);
   const chart = slide1.charts.items[0];
@@ -310,9 +469,10 @@ ${(data.methodologyNotes || []).join("\n")}
 [/Sources]`,
   );
 
+  await rewrite(presentation, index, "slide-2-title", "Codex 工作紀錄｜代表應用與 AI Value");
   const heading =
     mode === "general"
-      ? "代表工程應用｜3 個主要專案"
+      ? `代表工程應用｜${Math.min(3, projects.length)} 個主要專案`
       : mode === "starter"
         ? "代表工程應用｜起步使用紀錄"
         : "代表工程應用｜資料累積中";
@@ -340,26 +500,9 @@ ${(data.methodologyNotes || []).join("\n")}
   }
 
   const otherProjects = projects.slice(3);
-  await rewrite(
-    presentation,
-    index,
-    "slide-2-value-title-1",
-    otherProjects.length
-      ? `其餘工作｜${otherProjects.reduce((sum, item) => sum + Math.max(1, Number(item.groupCount) || 1), 0)} 個群組`
-      : "其餘工作｜資料累積中",
-  );
-  await rewrite(
-    presentation,
-    index,
-    "slide-2-value-body-1",
-    bulletLines(
-      otherProjects.map(
-        (item) => `${item.name}｜${Number(item.workRecordCount) || 0} 筆`,
-      ),
-      4,
-      18,
-    ),
-  );
+  const observation = data.aiComprehensiveObservation;
+  await rewrite(presentation, index, "slide-2-value-title-1", "AI 綜合應用觀察");
+  await rewrite(presentation, index, "slide-2-value-body-1", observation.observationText);
 
   const recordsWithSkill = Number(data.skills?.recordsWithSkill) || 0;
   const skillPercent = workCount ? Math.round((recordsWithSkill / workCount) * 100) : 0;
@@ -387,33 +530,38 @@ ${(data.methodologyNotes || []).join("\n")}
   await rewrite(presentation, index, "slide-2-value-body-2", skillLines);
 
   const aiItems = normalizedAiItems(data);
-  const observed = aiItems.filter((item) => item.status === "已觀察").length;
-  const aiTitle =
-    mode === "no-data"
-      ? "AI Value｜資料累積中"
-      : mode === "starter"
-        ? `AI Value｜初步觀察（${observed}／4）`
-        : `AI Value｜${observed}／4 面向已觀察`;
+  const aiAverage = scoreAverage(aiItems, "aiEvidenceScore");
+  const selfAverage = scoreAverage(aiItems, "selfScore");
+  const aiTitle = "AI 的證據與自評";
   await rewrite(presentation, index, "slide-2-value-title-3", aiTitle);
-  await rewrite(
-    presentation,
-    index,
-    "slide-2-value-body-3",
-    aiItems.map((item) => `• ${item.name}｜${item.status}`).join("\n"),
-  );
+  const aiTable = await resolveNamed(presentation, index, "slide-2-value-table-3", "table");
+  const aiRows = [["面向", "AI 證據", "同仁自評"], ...aiItems.map((item) => [item.name, String(item.aiEvidenceScore), String(item.selfScore)])];
+  for (let row = 0; row < aiRows.length; row += 1) {
+    for (let column = 0; column < aiRows[row].length; column += 1) aiTable.cells.set(row, column, aiRows[row][column]);
+  }
   await rewrite(
     presentation,
     index,
     "slide-2-next-step",
-    "AI Value 記錄 AI 的實際工作助益，供績效考核參考之一；不作單一判定或排名。",
+    `AI 建議｜${clip(
+      observation.improvement || "本期資料仍在累積；待有足夠工作相關紀錄後再形成個人化建議。",
+      62,
+    )}`,
   );
 
   slide2.speakerNotes.textFrame.setText(
     `本頁用於記錄 AI 是否協助實際工作，可作為個人績效與考核的參考之一；不作單一判定或員工排名。
 Skill 覆蓋率：${recordsWithSkill}／${workCount}（${skillPercent}%）；同一 Skill 在同一工作最多計 1 次。
-AI Value：${aiTitle}。
-${aiItems.map((item) => `- ${item.name}｜${item.status}：${item.evidence || "尚無足夠證據"}`).join("\n")}
-低樣本顯示「初步觀察」或「資料累積中」，不代表低價值。
+AI Value：${aiTitle}；AI 證據評分平均 ${aiAverage}；同仁自評平均 ${selfAverage}。
+${aiItems.map((item) => `- ${item.name}｜AI 證據評分 ${item.aiEvidenceScore}／同仁自評 ${item.selfScore}：${item.evidence || "資料不足或不適用"}`).join("\n")}
+評分只允許 1–5 或 N/A；N/A 不納入平均。AI 證據不足時使用 N/A，不代表低價值。
+AI 綜合應用觀察狀態：${observation.status}；成熟度：${observation.maturityLevel}。
+量化訊號：Token ${exactNumber(observation.quantitativeSignals.totalTokens)}、工作紀錄 ${observation.quantitativeSignals.workRecordCount}、使用天數 ${observation.quantitativeSignals.activeDays}／${observation.quantitativeSignals.eligibleDays}、活躍互動 ${observation.quantitativeSignals.activeMinutes} 分鐘、專案群組 ${observation.quantitativeSignals.projectGroupCount}、Skill 覆蓋率 ${observation.quantitativeSignals.skillCoverageRate}%。
+${observation.dimensionAssessments.map((item) => `- ${item.name}｜${item.score}：${item.evidence || "資料不足或不適用"}`).join("\n")}
+觀察優勢：${(observation.strengths || []).join("；") || "資料不足"}
+改善方向：${observation.improvement || "資料不足"}
+限制：${(observation.limitations || []).join("；") || "無額外限制"}
+其餘專案群組：${otherProjects.length ? otherProjects.map((item) => `${item.name}（${Number(item.workRecordCount) || 0} 筆）`).join("；") : "無"}
 [Sources]
 - ${data.sourceSummary || "Codex 本機工作 session"}
 - Local evidence generated by codex-ai-usage-report

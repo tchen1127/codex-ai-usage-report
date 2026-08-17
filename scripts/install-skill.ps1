@@ -37,9 +37,12 @@ $required = @(
     'agents\openai.yaml',
     'assets\rd-codex-ai-usage-report-template.pptx',
     'assets\template.sha256',
+    'references\report-standard.md',
+    'references\comprehensive-observation.md',
     'scripts\extract_codex_usage.mjs',
     'scripts\build_report.mjs',
-    'scripts\validate_report.mjs'
+    'scripts\validate_report.mjs',
+    'scripts\collect_self_rating.ps1'
 )
 
 foreach ($relative in $required) {

@@ -1,4 +1,4 @@
-# 研發部 Codex AI 使用報告規範 v1
+# 研發部 Codex AI 使用報告規範 v2
 
 ## 固定設定
 
@@ -49,36 +49,64 @@
 
 分類以該工作的主要交付目的為準，不只看關鍵字。無法判斷時根據使用者最後要求與產出型態做保守判斷。
 
-## AI Value：工作助益，不做排名
+## AI Value：AI 證據評分與同仁自評
 
 AI Value 可作為個人績效與考核的參考之一，但不得只以 Token、使用量或單一分數判定，也不建立員工排名。
 
-四個助益面向：
+五個助益面向：
 
 1. 任務推進：AI 是否協助完成、推進、除錯、決策或交付實際工作。
 2. 品質與查核：AI 是否協助 Review、交叉比對、證據整理、規格確認或改善內容品質。
 3. 可複用成果：是否形成可再次使用的 Script、Skill、MCP、Template、Workbook、文件或工程交換檔。
 4. 風險辨識：AI 是否協助指出設計、相容性、量產、品質、時程或驗證風險。
+5. 工作效率提升：AI 是否減少重複步驟、加快搜尋整理、自動化處理或縮短交付流程；沒有可靠前後工時時，不得宣稱節省時數或效率百分比。
 
-每個面向只能使用下列狀態：
+每個面向在 PPT 顯示兩個獨立分數：
 
-- `已觀察`：至少有一項具體、可描述的工作證據。
-- `初步觀察`：證據量少或影響仍待後續工作確認。
-- `資料累積中`：沒有足夠證據；不是低價值或負面評語。
+- `AI 證據評分`：由 Codex 工作 session 中可回溯的工作內容、成果與助益證據保守評定。
+- `同仁自評`：由同仁依本人感受到的工作助益填寫；只填分數，不要求文字事例。
 
-標題規則：
+兩欄都只能使用 `1–5` 或 `N/A`：
 
-- 10 筆以上：`AI Value｜X／4 助益面向已觀察`
-- 1–9 筆：`AI Value｜初步觀察（X／4）`
-- 0 筆：`AI Value｜資料累積中`
+- `1`：幾乎沒有實質助益。
+- `2`：只有少量、個別或有限助益。
+- `3`：可觀察到明確且具體的助益。
+- `4`：經常產生明顯且重要的助益。
+- `5`：廣泛、持續並對工作成果產生關鍵助益。
+- `N/A`：本期不適用、沒有使用，或 AI 證據不足以評定；不代表低價值。
 
-`X` 只計狀態為「已觀察」的面向。Speaker Notes 必須列出各面向的證據或資料仍在累積的原因。
+AI 證據評分必須依證據強度與影響範圍判定，不得只依 Token、工作紀錄數、使用天數或關鍵字自動換算。AI 給 `1–5` 時，`evidence` 必須保留可回溯的簡短依據於 Speaker Notes；PPT 畫面不顯示事例。證據不足時必須使用 `N/A`。
+
+同仁自評在 AI 分析完成後一次收集五項 `1–5` 或 `N/A`，不要求文字說明。為降低錨定影響，收集前不要先顯示 AI 證據評分。
+
+### 同仁自評視窗
+
+預設執行 `scripts/collect_self_rating.ps1`，用單一 Windows 視窗一次顯示並收集五項分數。視窗必須符合：
+
+- 五項各自顯示名稱、白話說明及鎖定式下拉選單。
+- 下拉選單只提供 `1、2、3、4、5、N/A`，不能手動輸入文字。
+- 視窗上方同時顯示等級意義：`1` 幾乎沒有實質助益、`2` 少量或有限助益、`3` 明確且具體助益、`4` 經常有明顯且重要助益、`5` 廣泛持續且對成果有關鍵助益、`N/A` 本期不適用或資訊不足。
+- 不要求同仁輸入理由、評語或工作事例；五項未全部選完前不得確認。
+- 五項說明固定為：
+  - 任務推進：是否協助完成工作、解決阻礙、分析問題、作出決定或推進至可交付結果。
+  - 品質與查核：是否協助 Review、交叉比對、規格確認、資料查證、測試或修正錯誤。
+  - 可複用成果：是否協助建立可再次使用的 Script、Skill、Template、Workbook、文件或標準流程。
+  - 風險辨識：是否協助發現設計、規格、相容性、量產、品質、時程、測試或執行風險。
+  - 工作效率提升：是否減少重複步驟、加快搜尋整理、自動化處理或縮短流程；不要求估算節省時數。
+
+AI 證據評分與 AI 綜合應用觀察必須先在內部完成，再顯示自評視窗；但在同仁送出自評前不得揭露兩者內容，以避免錨定。
+
+PPT 卡片標題固定顯示 `AI 的證據與自評`，以表格呈現五個面向與 `AI 證據`、`同仁自評` 兩欄分數。兩欄平均分開計算，`N/A` 不納入平均，不得再混成單一總分。
+
+## AI 綜合應用觀察
+
+依 [comprehensive-observation.md](comprehensive-observation.md) 的六面向、成熟度與證據規則產生。第二頁左下卡片固定顯示 `AI 綜合應用觀察`；畫面只放個人化短評，量化訊號、六面向證據、優勢、改善建議與限制留在 Speaker Notes。自評只反映同仁感受，不得改寫 AI 綜合觀察或 AI 證據評分。
 
 ## 樣本狀態
 
 - `general`：10 筆以上。
-- `starter`：1–9 筆；投影片註明樣本累積中，空列用 `—`。
-- `no-data`：0 筆；仍產生兩頁，所有數字如實為 0，AI Value 顯示資料累積中。
+- `starter`：1–9 筆；投影片註明樣本累積中，空列用 `—`；AI 證據不足的面向使用 `N/A`。
+- `no-data`：0 筆；仍產生兩頁，所有數字如實為 0，AI 證據評分固定使用 `N/A`。
 
 圓餅圖在 1–9 筆時使用實際比例並在 Notes 註明樣本少；0 筆時顯示四個等分色塊但標籤為 `—`，不可顯示虛假的 25%。
 
@@ -88,7 +116,7 @@ AI Value 可作為個人績效與考核的參考之一，但不得只以 Token�
 
 ```json
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "2.0",
   "employee": { "englishName": "English Name", "chineseName": "中文姓名" },
   "department": "研發部",
   "period": { "start": "2026-01-01", "end": "2026-01-31", "timezone": "Asia/Taipei" },
@@ -125,13 +153,39 @@ AI Value 可作為個人績效與考核的參考之一，但不得只以 Token�
     "top": [{ "name": "Skill Name", "count": 0 }]
   },
   "aiValue": {
-    "observedDimensions": 0,
     "items": [
-      { "name": "任務推進", "status": "資料累積中", "evidence": "" },
-      { "name": "品質與查核", "status": "資料累積中", "evidence": "" },
-      { "name": "可複用成果", "status": "資料累積中", "evidence": "" },
-      { "name": "風險辨識", "status": "資料累積中", "evidence": "" }
+      { "name": "任務推進", "aiEvidenceScore": 4, "selfScore": 4, "evidence": "可回溯的 AI 助益證據" },
+      { "name": "品質與查核", "aiEvidenceScore": 5, "selfScore": 5, "evidence": "可回溯的 AI 助益證據" },
+      { "name": "可複用成果", "aiEvidenceScore": 3, "selfScore": 3, "evidence": "可回溯的 AI 助益證據" },
+      { "name": "風險辨識", "aiEvidenceScore": 4, "selfScore": 4, "evidence": "可回溯的 AI 助益證據" },
+      { "name": "工作效率提升", "aiEvidenceScore": "N/A", "selfScore": "N/A", "evidence": "" }
     ]
+  },
+  "aiComprehensiveObservation": {
+    "status": "evaluated",
+    "maturityLevel": "穩定應用",
+    "observationText": "依本期紀錄呈現的個人化 AI 應用觀察，須符合字數與證據規則。",
+    "quantitativeSignals": {
+      "totalTokens": 0,
+      "workRecordCount": 0,
+      "activeDays": 0,
+      "eligibleDays": 0,
+      "activeMinutes": 0,
+      "projectGroupCount": 0,
+      "skillCoverageRate": 0
+    },
+    "dimensionAssessments": [
+      { "name": "使用投入與持續性", "score": 3, "evidence": "可回溯依據" },
+      { "name": "任務廣度", "score": 3, "evidence": "可回溯依據" },
+      { "name": "任務深度與複雜度", "score": 3, "evidence": "可回溯依據" },
+      { "name": "成果與實務價值", "score": 3, "evidence": "可回溯依據" },
+      { "name": "品質、查核與風險意識", "score": 3, "evidence": "可回溯依據" },
+      { "name": "可複用性與成熟度", "score": 3, "evidence": "可回溯依據" }
+    ],
+    "strengths": ["本期可由證據支持的優勢"],
+    "improvement": "下一步可執行的改善方向。",
+    "limitations": ["資料或推論限制"],
+    "internalScore": 60
   },
   "methodologyNotes": ["納入與排除摘要"],
   "sourceSummary": "Codex 本機工作 session"

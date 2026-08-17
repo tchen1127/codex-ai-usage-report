@@ -30,6 +30,10 @@ function maxDelta(actual, expected) {
   return Math.max(...expected.map((value, index) => Math.abs((actual?.[index] ?? NaN) - value)));
 }
 
+function nonWhitespaceChars(value) {
+  return [...String(value || "").replace(/\s/g, "")].length;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (!args.input) throw new Error("--input is required.");
@@ -57,7 +61,7 @@ async function main() {
     }
     const snapshot = await presentation.inspect({
       kind: "slide,textbox,shape,table,chart",
-      include: "id,slide,name,bbox,kind,textLines,textChars",
+      include: "id,slide,name,bbox,kind,text,textLines,textChars",
       maxChars: 36000,
     });
     const records = snapshot.ndjson
@@ -92,6 +96,30 @@ async function main() {
     if (!records.some((record) => record.kind === "table")) {
       fatal.push({ code: "missing-table", message: "No table found in the report." });
     }
+    const observationTitle = records.find(
+      (record) => record.slide === 2 && record.name === "slide-2-value-title-1" && record.kind === "textbox",
+    );
+    const observationBody = records.find(
+      (record) => record.slide === 2 && record.name === "slide-2-value-body-1" && record.kind === "textbox",
+    );
+    if (!observationTitle || String(observationTitle.text || "").trim() !== "AI 綜合應用觀察") {
+      fatal.push({ code: "missing-observation-title", message: "Slide 2 AI 綜合應用觀察 title is missing or invalid." });
+    }
+    if (!observationBody) {
+      fatal.push({ code: "missing-observation-body", message: "Slide 2 AI 綜合應用觀察 body is missing." });
+    } else {
+      const chars = nonWhitespaceChars(observationBody.text);
+      if (chars < 20 || chars > 160) {
+        fatal.push({
+          code: "invalid-observation-body",
+          message: "AI 綜合應用觀察 must contain 20-160 non-whitespace characters.",
+        });
+      }
+    }
+    const aiValueTable = records.find(
+      (record) => record.slide === 2 && record.name === "slide-2-value-table-3" && record.kind === "table",
+    );
+    if (!aiValueTable) fatal.push({ code: "missing-ai-value-table", message: "AI evidence and self-rating table is missing." });
   }
 
   const result = {
@@ -101,7 +129,7 @@ async function main() {
     fatal,
     warnings,
     policy:
-      "Warnings do not block delivery. Only unreadable files, wrong slide count, or missing core objects are fatal.",
+      "Warnings do not block delivery. Unreadable files, wrong slide count, missing core objects, invalid AI 綜合應用觀察, or invalid AI Value rows are fatal.",
     checkedAt: new Date().toISOString(),
   };
   await fs.mkdir(path.dirname(reportPath), { recursive: true });

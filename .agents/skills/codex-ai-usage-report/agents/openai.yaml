@@ -2,6 +2,6 @@ interface:
   display_name: "Codex AI 使用報告"
   short_description: "自動分析本機 Codex 工作紀錄並產生固定兩頁研發 AI 使用報告"
   brand_color: "#155DCC"
-  default_prompt: "使用 $codex-ai-usage-report，依我提供的中英文姓名與統計日期區間，自動產生固定兩頁研發 AI 使用報告。"
+  default_prompt: "使用 $codex-ai-usage-report，先依我提供的中英文姓名與統計日期區間分析本機紀錄並產生 AI 綜合應用觀察，再以五個下拉選單收集同仁自評，最後產生固定兩頁研發 AI 使用報告。"
 policy:
   allow_implicit_invocation: true
