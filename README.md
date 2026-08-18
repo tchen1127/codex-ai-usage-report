@@ -2,9 +2,16 @@
 
 使用本機 Codex 工作紀錄，自動產生格式一致的兩頁 AI 工作報告。
 
-目前版本：`v1.1.0`｜[版本變更記錄](https://github.com/tchen1127/codex-ai-usage-report/releases/tag/v1.1.0)
+目前版本：`v1.1.1`｜[版本變更記錄](https://github.com/tchen1127/codex-ai-usage-report/releases/tag/v1.1.1)
 
 本 Repository 只包含通用 Skill、空白 PowerPoint 模板與啟動工具，不包含任何員工個人範例、Token 數字、客戶名稱、公司專案名稱、原始 Prompt 或 Codex Session。
+
+## 建議 Codex 模型設定
+
+- 建議模型：`gpt-5.6-terra`
+- 推理等級：`中`
+
+此設定適合本機 session 歸類、AI Value／綜合應用觀察與兩頁報告產生的日常使用；只有資料來源混雜或需逐筆深度判讀時，才需提高推理等級。
 
 ## 最簡單的使用方式
 
