@@ -6,17 +6,19 @@
 
 1. 完整閱讀根目錄的 `START_AI_REPORT.md`。
 2. 確認 `.agents/skills/codex-ai-usage-report/SKILL.md` 與模板存在。
-3. 依 `START_AI_REPORT.md` 執行安裝檢查；安裝腳本若顯示已是相同版本，不重複覆蓋。
+3. 依 `START_AI_REPORT.md` 只執行 Codex Skill 安裝檢查；不得將本 Skill 安裝或複製到 Antigravity。安裝腳本若顯示已是相同版本，不重複覆蓋。
 4. 使用 `$codex-ai-usage-report` 開始報告流程。
 5. 若尚未取得資料，先只詢問英文姓名、中文姓名、統計起日、統計迄日四項，而且一次問完。
-6. 分析本機 Codex 工作 Session，先完成五項 AI 證據評分與 AI 綜合應用觀察；不可先顯示其內容。
+6. 分析本機 Codex 工作 Session，並在 Antigravity 本機資料存在時依整合規範納入備援工作；先完成五項 AI 證據評分與 AI 綜合應用觀察，不可先顯示其內容。
 7. 執行 Skill 的 `collect_self_rating.ps1`，以單一 Windows 視窗的五個鎖定式下拉選單，收集任務推進、品質與查核、可複用成果、風險辨識、工作效率提升的 `1–5` 或 `N/A`。視窗要顯示五項說明和分數意義，不要求文字事例。
 8. 收到五項同仁自評後，產生固定兩頁 PPT 並完成驗證。
 
 ## 隱私與交付
 
-- 不要求使用者手動列出工作內容；以本機 Codex Session 為來源。
-- 只分析目前 Windows 使用者的 `%USERPROFILE%/.codex` 或目前生效的 `CODEX_HOME`；不得自動掃描其他 Windows 使用者資料夾。
+- 不要求使用者手動列出工作內容；以本機 Codex 與可讀取的 Antigravity Session 為來源。
+- 本報告 Skill 只能由 Codex 執行；Antigravity 僅為 Codex 唯讀分析的本機資料來源。只有至少一筆 Antigravity 工作 Session 通過日期、完整性、工作相關性與去重檢查時，才判定為雙 AI。
+- 不得在 Antigravity 執行本 Skill：其環境不保證支援 Codex workspace dependencies、PowerPoint artifact runtime、驗證工具與 Windows 自評流程；遇到此要求應停止並改回 Codex 完整執行。
+- 只分析目前 Windows 使用者的 `%USERPROFILE%/.codex`、目前生效的 `CODEX_HOME` 與 `%USERPROFILE%/.gemini/antigravity`；不得自動掃描其他 Windows 使用者資料夾。
 - 同一位員工在目前 Windows 使用者資料範圍內使用多個 Codex 登入帳號時，合併成一份員工報告，不作帳號別拆分；在 Speaker Notes 說明 Token 為多帳號合計，不代表單一訂閱帳號的帳單或額度。
 - 只有在 Windows 帳號或 `.codex` 曾由不同人共用時，才說明紀錄無法可靠分離並停止自動報告，等待使用者提供隔離後的資料來源。
 - 不將原始 Prompt、完整對話、Session 路徑或敏感檔案內容寫入投影片。
