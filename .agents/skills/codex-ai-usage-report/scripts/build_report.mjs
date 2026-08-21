@@ -133,6 +133,40 @@ function validateData(data) {
   if (Number.isFinite(workCount) && projectSum !== workCount) {
     errors.push(`project work-record sum ${projectSum} does not equal workRecordCount ${workCount}`);
   }
+  const sources = Array.isArray(data?.sources) ? data.sources : [];
+  if (data?.sources != null && !sources.length) errors.push("sources must contain at least one source when provided");
+  if (sources.length) {
+    const sourceIds = new Set();
+    let sourceRecordSum = 0;
+    let sourceTokenSum = 0;
+    for (const source of sources) {
+      const id = String(source?.id || "").trim();
+      const label = String(source?.label || "").trim();
+      if (!id) errors.push("sources[].id is required");
+      if (id && sourceIds.has(id)) errors.push(`sources contains duplicate id ${id}`);
+      sourceIds.add(id);
+      if (!label) errors.push(`sources ${id || "unknown"}.label is required`);
+      const recordCount = Number(source?.workRecordCount);
+      const sourceTokens = Number(source?.tokens?.totalTokens);
+      if (!Number.isInteger(recordCount) || recordCount < 0) {
+        errors.push(`sources ${id || "unknown"}.workRecordCount must be a non-negative integer`);
+      } else {
+        sourceRecordSum += recordCount;
+      }
+      if (!Number.isInteger(sourceTokens) || sourceTokens < 0) {
+        errors.push(`sources ${id || "unknown"}.tokens.totalTokens must be a non-negative integer`);
+      } else {
+        sourceTokenSum += sourceTokens;
+      }
+    }
+    if (Number.isFinite(workCount) && sourceRecordSum !== workCount) {
+      errors.push(`source work-record sum ${sourceRecordSum} does not equal workRecordCount ${workCount}`);
+    }
+    const metricTokens = Number(data?.metrics?.totalTokens);
+    if (Number.isFinite(metricTokens) && sourceTokenSum !== metricTokens) {
+      errors.push(`source token sum ${sourceTokenSum} does not equal metrics.totalTokens ${metricTokens}`);
+    }
+  }
   const aiItems = Array.isArray(data?.aiValue?.items) ? data.aiValue.items : [];
   if (aiItems.length !== AI_VALUE_DIMENSIONS.length) {
     errors.push(`aiValue.items must contain exactly ${AI_VALUE_DIMENSIONS.length} items`);
@@ -348,6 +382,23 @@ async function main() {
   const metrics = data.metrics;
   const workCount = Number(metrics.workRecordCount) || 0;
   const mode = sampleModeFor(workCount, data.sampleMode);
+  const sources = Array.isArray(data.sources) ? data.sources : [];
+  const platformLabel = String(
+    data.platformLabel || sources.map((item) => item.label).filter(Boolean).join("＋") || "Codex",
+  );
+  const multiPlatform = sources.length > 1 || platformLabel.includes("＋");
+  const tokenDisplayNote = String(
+    data.tokenDisplayNote ||
+      (sources.some((item) => item.id === "antigravity")
+        ? "含 Cached Input／Cache Read｜額度規劃依據"
+        : "含 Cached Input｜作為額度需求評估依據"),
+  );
+  const tokenMethodSummary = String(
+    data.tokenMethodSummary ||
+      (sources.some((item) => item.id === "antigravity")
+        ? "包含 Codex Cached Input 與 Antigravity Cache Read；Antigravity thinking／response 為 output 子集，未重複加總。"
+        : "包含 Codex 回報的 Cached Input。"),
+  );
   const projects = [...(data.projects || [])].sort((a, b) => {
     if (Boolean(a.aggregate) !== Boolean(b.aggregate)) return a.aggregate ? 1 : -1;
     return (Number(b.workRecordCount) || 0) - (Number(a.workRecordCount) || 0);
@@ -372,16 +423,16 @@ async function main() {
     presentation,
     index,
     "slide-1-title",
-    `${data.employee.englishName}（${data.employee.chineseName}）｜Codex 使用與工作價值`,
+    `${data.employee.englishName}（${data.employee.chineseName}）｜${multiPlatform ? "雙平台 AI" : platformLabel} 使用與工作價值`,
   );
   await rewrite(
     presentation,
     index,
     "slide-1-subtitle",
-    `統計期間：${displayStart}–${displayEnd}｜${data.department || "研發部"}｜僅納入工作相關內容`,
+    `統計期間：${displayStart}–${displayEnd}｜${data.department || "研發部"}｜${multiPlatform ? `${platformLabel} 整合` : "僅納入工作相關內容"}`,
   );
-  await rewrite(presentation, index, "slide-1-kpi-value-1", `${workCount} 筆`);
-  await rewrite(presentation, index, "slide-1-kpi-label-1", "AI 工作紀錄");
+  await rewrite(presentation, index, "slide-1-kpi-value-1", `${workCount}`);
+  await rewrite(presentation, index, "slide-1-kpi-label-1", "AI 工作紀錄（筆）");
   await rewrite(presentation, index, "slide-1-kpi-detail-1", `${projectCount} 個專案群組`);
   await rewrite(presentation, index, "slide-1-kpi-value-2", `${activeDays}／${eligibleDays}`);
   await rewrite(presentation, index, "slide-1-kpi-label-2", "使用天數");
@@ -394,13 +445,14 @@ async function main() {
   await rewrite(presentation, index, "slide-1-kpi-value-3", compactNumber(totalTokens));
   await rewrite(presentation, index, "slide-1-kpi-label-3", "期間總 Token");
   await rewrite(presentation, index, "slide-1-kpi-detail-3", exactNumber(totalTokens), 0);
+  await rewrite(presentation, index, "slide-1-kpi-detail-3", tokenDisplayNote, 1);
   const sampleNote = mode === "starter" ? "｜樣本累積中" : mode === "no-data" ? "｜本期無紀錄" : "";
   await rewrite(
     presentation,
     index,
     "slide-1-footer",
     `※ 本報告供個人 AI 應用與績效考核參考之一；不作為單一判定或員工排名${sampleNote}。\n` +
-      `資料來源：Codex 本機工作 session｜Token 供部門額度規劃｜快照：${displayEnd}`,
+      `資料來源：${platformLabel} 本機工作紀錄｜Token 供部門額度規劃｜快照：${displayEnd}`,
   );
   await rewrite(presentation, index, "slide-1-chart-title", "工作分類｜AI 工作紀錄分布");
 
@@ -456,23 +508,32 @@ async function main() {
   const categoryNote = categories.map((item) => `${item.name} ${item.count}`).join("、");
   slide1.speakerNotes.textFrame.setText(
     `統計期間：${periodStart}–${periodEnd}（${data.period?.timezone || "Asia/Taipei"}）。
-統計單位：目前 Windows 使用者／員工；同一資料範圍內的多個 Codex 登入帳號合併統計，不作帳號別拆分。
+統計單位：目前 Windows 使用者／員工；同一資料範圍內的 ${platformLabel} 本機工作紀錄合併統計，不作帳號別拆分。
 樣本狀態：${mode}；AI 工作紀錄 ${workCount} 筆、專案群組 ${projectCount} 個。
 分類：${categoryNote}。
-Token：${exactNumber(totalTokens)}，包含 Codex 回報的 Cached Input；供部門額度規劃，不等同帳單金額。
+Token：${exactNumber(totalTokens)}。${tokenMethodSummary}供部門額度規劃，不等同帳單金額。
 使用天數：${activeDays}／${eligibleDays}；活躍互動約 ${formatHours(metrics.activeMinutes)}h，為 session 互動區段估計，不是正式工時。
 本報告可作為個人 AI 應用與績效考核參考之一，但不得只用 Token、使用量或單一分數判定，也不作員工排名。
 ${(data.methodologyNotes || []).join("\n")}
 [Sources]
 - ${data.sourceSummary || "Codex 本機工作 session"}
+${sources.map((item) => `- ${item.label}（${item.role || "source"}）：工作紀錄 ${Number(item.workRecordCount) || 0} 筆；Token ${exactNumber(item.tokens?.totalTokens)}`).join("\n")}
 - Local evidence generated by codex-ai-usage-report
 [/Sources]`,
   );
 
-  await rewrite(presentation, index, "slide-2-title", "Codex 工作紀錄｜代表應用與 AI Value");
+  await rewrite(
+    presentation,
+    index,
+    "slide-2-title",
+    multiPlatform ? "跨平台 AI 工作紀錄｜代表應用與 AI Value" : `${platformLabel} 工作紀錄｜代表應用與 AI Value`,
+  );
+  const representativeProjects = Array.isArray(data.representativeProjects) && data.representativeProjects.length
+    ? data.representativeProjects
+    : projects;
   const heading =
     mode === "general"
-      ? `代表工程應用｜${Math.min(3, projects.length)} 個主要專案`
+      ? `代表工程應用｜${Math.min(3, representativeProjects.length)} 個主要專案`
       : mode === "starter"
         ? "代表工程應用｜起步使用紀錄"
         : "代表工程應用｜資料累積中";
@@ -484,7 +545,7 @@ ${(data.methodologyNotes || []).join("\n")}
   ];
   for (let i = 0; i < projectSlots.length; i += 1) {
     const [titleName, bodyName, titleLimit, bulletLimit] = projectSlots[i];
-    const item = projects[i];
+    const item = representativeProjects[i];
     if (item) {
       await rewrite(
         presentation,
@@ -564,6 +625,7 @@ ${observation.dimensionAssessments.map((item) => `- ${item.name}｜${item.score}
 其餘專案群組：${otherProjects.length ? otherProjects.map((item) => `${item.name}（${Number(item.workRecordCount) || 0} 筆）`).join("；") : "無"}
 [Sources]
 - ${data.sourceSummary || "Codex 本機工作 session"}
+${sources.map((item) => `- ${item.label}（${item.role || "source"}）：工作紀錄 ${Number(item.workRecordCount) || 0} 筆；Token ${exactNumber(item.tokens?.totalTokens)}`).join("\n")}
 - Local evidence generated by codex-ai-usage-report
 [/Sources]`,
   );

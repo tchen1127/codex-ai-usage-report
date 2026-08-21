@@ -1,7 +1,7 @@
 interface:
-  display_name: "Codex AI 使用報告"
-  short_description: "自動分析本機 Codex 工作紀錄並產生固定兩頁研發 AI 使用報告"
+  display_name: "Codex＋Antigravity AI 使用報告"
+  short_description: "由 Codex 整合本機雙 AI 紀錄，產生兩頁研發報告"
   brand_color: "#155DCC"
-  default_prompt: "使用 $codex-ai-usage-report，先依我提供的中英文姓名與統計日期區間分析本機紀錄並產生 AI 綜合應用觀察，再以五個下拉選單收集同仁自評，最後產生固定兩頁研發 AI 使用報告。"
+  default_prompt: "在 Codex 中使用 $codex-ai-usage-report，依姓名與日期唯讀整合本機 Codex 及可用的 Antigravity 工作紀錄，收集五項同仁自評後產生固定兩頁研發 AI 使用報告。"
 policy:
   allow_implicit_invocation: true

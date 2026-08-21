@@ -1,8 +1,10 @@
-# Codex AI 使用報告
+# Codex＋Antigravity AI 使用報告
 
-使用本機 Codex 工作紀錄，自動產生格式一致的兩頁 AI 工作報告。
+使用本機 Codex 工作紀錄，並在可用時整合 Google Antigravity 備援工作紀錄，自動產生格式一致的兩頁 AI 工作報告。
 
-目前版本：`v1.1.1`｜[版本變更記錄](https://github.com/tchen1127/codex-ai-usage-report/releases/tag/v1.1.1)
+> **執行環境限制：本 Skill 只能在 Codex 執行。** 完整流程需要 Codex 提供的 bundled Node／Python、PowerPoint artifact runtime、驗證工具與 Windows 自評流程；Antigravity 部分指令與 runtime 不相容，可能造成流程中斷或報告未完整驗證。Antigravity 只作為 Codex 唯讀分析的第二份本機資料來源，請勿將本 Skill 安裝到 Antigravity。
+
+目前版本：`v1.2.0`
 
 本 Repository 只包含通用 Skill、空白 PowerPoint 模板與啟動工具，不包含任何員工個人範例、Token 數字、客戶名稱、公司專案名稱、原始 Prompt 或 Codex Session。
 
@@ -31,7 +33,7 @@ Codex 會自動讀取根目錄的 `AGENTS.md`，使用 Repository 內的 `.agent
 - 統計起日
 - 統計迄日
 
-Codex 完成工作紀錄分析後，會開啟一個簡單的 Windows 視窗，讓同仁以五個下拉選單一次選擇五項 AI Value 自評的 `1–5` 或 `N/A`：任務推進、品質與查核、可複用成果、風險辨識、工作效率提升。視窗會直接說明每項意義與分數定義，不要求文字事例，也不需要手動整理工作項目或修改 PowerPoint 版型。
+Codex 會分析本機 Codex Session，並自動唯讀檢查 `%USERPROFILE%\.gemini\antigravity\conversations` 與 `brain`。只有期間內至少一筆 Antigravity Session 通過資料完整性、工作相關性與去重檢查，才會顯示 `Codex＋Antigravity`；資料夾不存在、沒有期間內紀錄或全部被排除時，報告維持 Codex-only。完成工作證據分析後，會開啟一個簡單的 Windows 視窗，讓同仁以五個下拉選單一次選擇五項 AI Value 自評的 `1–5` 或 `N/A`。
 
 也可以直接輸入：
 
@@ -60,18 +62,18 @@ Codex 會自動尋找 Repository 內的 `.agents/skills`，因此開啟本資料
    powershell -ExecutionPolicy Bypass -File .\scripts\install-skill.ps1
    ```
 
-3. 確認輸出包含 `STATUS=updated` 或 `STATUS=already-current`。
+3. 確認輸出包含 `CODEX_STATUS=updated`／`already-current`。安裝器只安裝 Codex Skill，不會寫入 Antigravity Skill 目錄。
 4. 重新執行報告流程並產生新的 PPT；先前已產生的 PPT 不會自動套用新版圖表設定。
 
 ## 報告原則
 
 - 固定兩頁、固定風格，方便研發部門彙整。
 - 工作分類圓環圖顯示百分比與分類名稱；包含小比例項目時，圖表啟用自動外側配置與引導線。
-- 只分析指定日期區間內、判定為工作相關的本機 Codex Session。
+- 只分析指定日期區間內、判定為工作相關的本機 Codex 與可用的 Antigravity Session。
 - 排除 ChatGPT／GPT 聊天與非工作內容。
 - 使用紀錄較少或沒有資料時，使用「樣本累積中」或「資料累積中」，不虛構內容。
 - AI Value 同時顯示五項「AI 證據評分」與「同仁自評」，皆採 `1–5` 或 `N/A`，兩欄平均分開計算。
-- AI 綜合應用觀察依本機工作證據產生個人化短評，說明應用廣度、深度、成果、查核與可複用性；不作排名，也不以 Token 或分數直接判定績效。
+- AI 綜合應用觀察依本機工作證據產生個人化短評，說明跨平台任務廣度、深度、成果、查核與可複用性；不因平台數、Token 或配額切換直接提高評價。
 - 不建立員工排名；Token 或使用量不作為單一績效判定。
 - 原始 Prompt、Session 路徑與完整對話不會寫入投影片。
 
@@ -79,7 +81,9 @@ Codex 會自動尋找 Repository 內的 `.agents/skills`，因此開啟本資料
 
 本 Repository 本身不含員工資料。執行 Skill 後產生的報告屬於個人工作資料，請先檢查內容再交付；不要把 `reports/` 內的個人報告 Commit 或 Push 到 GitHub。
 
-Skill 預設只讀取目前 Windows 使用者的 `%USERPROFILE%\.codex`，或目前生效的 `CODEX_HOME`，不會自動掃描其他 Windows 使用者。同一位員工即使在這個資料範圍內使用多個 Codex 登入帳號，也會合併成一份員工報告，不作帳號別拆分；Token 是合計值，不代表單一訂閱帳號的帳單或額度。只有在 Windows 帳號或 `.codex` 曾由不同人共用時，才應停止並改用隔離的 Windows 使用者或 `CODEX_HOME`。
+Skill 預設只讀取目前 Windows 使用者的 `%USERPROFILE%\.codex`、目前生效的 `CODEX_HOME` 與 `%USERPROFILE%\.gemini\antigravity`，不會自動掃描其他 Windows 使用者。Token 是本機資料範圍內的合計，不代表帳單或剩餘配額；Antigravity thinking／response 是 output 子集，不會重複加總。
+
+Antigravity 方案與配額可能調整；本 Skill 不把刷新週期寫死，也不使用第三方工具登入或繞過配額。請以 [Google Antigravity Plans](https://antigravity.google/docs/plans) 與產品內 Usage／Quota 畫面為準。
 
 ## 主要檔案
 
@@ -87,6 +91,8 @@ Skill 預設只讀取目前 Windows 使用者的 `%USERPROFILE%\.codex`，或目
 - `.agents/skills/codex-ai-usage-report/`：完整報告 Skill。
 - `template/RD_Codex_AI_Usage_Report_2Page_Template.pptx`：空白兩頁模板。
 - `scripts/install-skill.ps1`：可重複執行、會保留舊版備份的安裝腳本。
+- `.agents/skills/codex-ai-usage-report/scripts/extract_antigravity_usage.py`：唯讀擷取 Antigravity 本機 evidence。
+- `.agents/skills/codex-ai-usage-report/scripts/summarize_usage_sources.py`：合併已人工確認納入的兩平台數量、Token、使用日與活躍區段。
 
 ## 官方參考
 

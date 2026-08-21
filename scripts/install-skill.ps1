@@ -39,7 +39,10 @@ $required = @(
     'assets\template.sha256',
     'references\report-standard.md',
     'references\comprehensive-observation.md',
+    'references\antigravity-integration.md',
     'scripts\extract_codex_usage.mjs',
+    'scripts\extract_antigravity_usage.py',
+    'scripts\summarize_usage_sources.py',
     'scripts\build_report.mjs',
     'scripts\validate_report.mjs',
     'scripts\collect_self_rating.ps1'
@@ -64,44 +67,57 @@ if ($expectedTemplateHash -ne $actualTemplateHash) {
     throw 'The bundled PowerPoint template did not pass the SHA256 integrity check.'
 }
 
-New-Item -ItemType Directory -Path $DestinationRoot -Force | Out-Null
-$destinationRootFull = (Resolve-Path -LiteralPath $DestinationRoot).Path.TrimEnd('\', '/')
-$destination = Join-Path $destinationRootFull $skillName
-$destinationFull = [IO.Path]::GetFullPath($destination)
-if (-not $destinationFull.StartsWith("$destinationRootFull\", [StringComparison]::OrdinalIgnoreCase)) {
-    throw 'The destination resolved outside the requested Skill directory.'
-}
-
 $sourceManifest = Get-SkillManifestHash -Root $sourceFull
-$status = 'installed'
-$backupPath = $null
 
-if (Test-Path -LiteralPath $destinationFull) {
-    $destinationManifest = Get-SkillManifestHash -Root $destinationFull
-    if ($destinationManifest -eq $sourceManifest) {
-        Write-Output 'STATUS=already-current'
-        Write-Output "DESTINATION=$destinationFull"
-        Write-Output "MANIFEST_SHA256=$sourceManifest"
-        return
+function Install-SkillCopy {
+    param(
+        [Parameter(Mandatory = $true)][string]$TargetRoot,
+        [Parameter(Mandatory = $true)][string]$BackupRoot,
+        [Parameter(Mandatory = $true)][string]$StatusPrefix
+    )
+
+    New-Item -ItemType Directory -Path $TargetRoot -Force | Out-Null
+    $targetRootFull = (Resolve-Path -LiteralPath $TargetRoot).Path.TrimEnd('\', '/')
+    $destinationFull = [IO.Path]::GetFullPath((Join-Path $targetRootFull $skillName))
+    if (-not $destinationFull.StartsWith("$targetRootFull\", [StringComparison]::OrdinalIgnoreCase)) {
+        throw "The $StatusPrefix destination resolved outside the requested Skill directory."
     }
 
-    $backupRoot = Join-Path (Split-Path -Parent $destinationRootFull) 'skill-backups'
-    New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
-    $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-    $backupPath = Join-Path $backupRoot "$skillName-$timestamp"
-    Move-Item -LiteralPath $destinationFull -Destination $backupPath
-    $status = 'updated'
+    $status = 'installed'
+    $backupPath = $null
+    if (Test-Path -LiteralPath $destinationFull) {
+        $destinationManifest = Get-SkillManifestHash -Root $destinationFull
+        if ($destinationManifest -eq $sourceManifest) {
+            $status = 'already-current'
+        }
+        else {
+            New-Item -ItemType Directory -Path $BackupRoot -Force | Out-Null
+            $backupRootFull = (Resolve-Path -LiteralPath $BackupRoot).Path.TrimEnd('\', '/')
+            $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+            $backupPath = [IO.Path]::GetFullPath((Join-Path $backupRootFull "$skillName-$timestamp"))
+            if (-not $backupPath.StartsWith("$backupRootFull\", [StringComparison]::OrdinalIgnoreCase)) {
+                throw "The $StatusPrefix backup resolved outside the requested backup directory."
+            }
+            Move-Item -LiteralPath $destinationFull -Destination $backupPath
+            $status = 'updated'
+        }
+    }
+
+    if ($status -ne 'already-current') {
+        Copy-Item -LiteralPath $sourceFull -Destination $destinationFull -Recurse
+    }
+    $installedManifest = Get-SkillManifestHash -Root $destinationFull
+    if ($installedManifest -ne $sourceManifest) {
+        throw "The $StatusPrefix Skill installation failed the manifest integrity check."
+    }
+
+    Write-Output "$($StatusPrefix)_STATUS=$status"
+    Write-Output "$($StatusPrefix)_DESTINATION=$destinationFull"
+    if ($backupPath) {
+        Write-Output "$($StatusPrefix)_BACKUP=$backupPath"
+    }
+    Write-Output "$($StatusPrefix)_MANIFEST_SHA256=$installedManifest"
 }
 
-Copy-Item -LiteralPath $sourceFull -Destination $destinationFull -Recurse
-$installedManifest = Get-SkillManifestHash -Root $destinationFull
-if ($installedManifest -ne $sourceManifest) {
-    throw 'The installed Skill failed the manifest integrity check. The previous version, if any, remains in the backup directory.'
-}
-
-Write-Output "STATUS=$status"
-Write-Output "DESTINATION=$destinationFull"
-if ($backupPath) {
-    Write-Output "BACKUP=$backupPath"
-}
-Write-Output "MANIFEST_SHA256=$installedManifest"
+$codexBackupRoot = Join-Path (Split-Path -Parent ([IO.Path]::GetFullPath($DestinationRoot))) 'skill-backups'
+Install-SkillCopy -TargetRoot $DestinationRoot -BackupRoot $codexBackupRoot -StatusPrefix 'CODEX'

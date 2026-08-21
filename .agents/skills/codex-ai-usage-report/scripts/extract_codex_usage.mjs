@@ -135,25 +135,35 @@ function heuristicWorkAssessment(cwd, summary) {
   };
 }
 
-function estimateActiveMinutes(timestamps) {
+function estimateActivity(timestamps) {
   const points = [...new Set(timestamps)]
     .map((value) => Date.parse(value))
     .filter(Number.isFinite)
     .sort((a, b) => a - b);
-  if (!points.length) return 0;
+  if (!points.length) return { activeMinutes: 0, activeSegments: [] };
   const threshold = 15 * 60 * 1000;
   let totalMinutes = 0;
   let segmentStart = points[0];
   let segmentEnd = points[0];
+  const activeSegments = [];
+  const closeSegment = () => {
+    const minutes = Math.max(2, (segmentEnd - segmentStart) / 60000);
+    totalMinutes += minutes;
+    activeSegments.push({
+      start: new Date(segmentStart).toISOString(),
+      end: new Date(segmentEnd).toISOString(),
+      minutes: Math.round(minutes * 10) / 10,
+    });
+  };
   for (let i = 1; i < points.length; i += 1) {
     if (points[i] - segmentEnd > threshold) {
-      totalMinutes += Math.max(2, (segmentEnd - segmentStart) / 60000);
+      closeSegment();
       segmentStart = points[i];
     }
     segmentEnd = points[i];
   }
-  totalMinutes += Math.max(2, (segmentEnd - segmentStart) / 60000);
-  return Math.round(totalMinutes * 10) / 10;
+  closeSegment();
+  return { activeMinutes: Math.round(totalMinutes * 10) / 10, activeSegments };
 }
 
 function dayRange(start, end) {
@@ -295,7 +305,7 @@ async function parseFile(file) {
     "The following is the Codex agent history whose request action you are assessing.",
   );
   const heuristic = heuristicWorkAssessment(session.cwd, summary);
-  const activeMinutes = estimateActiveMinutes(session.activityTimestamps);
+  const activity = estimateActivity(session.activityTimestamps);
 
   return {
     id: session.id,
@@ -305,7 +315,8 @@ async function parseFile(file) {
     firstTimestamp: session.firstTimestamp,
     lastTimestamp: session.lastTimestamp,
     activeDates: [...session.activeDates].filter(Boolean).sort(),
-    activeMinutes,
+    activeMinutes: activity.activeMinutes,
+    activeSegments: activity.activeSegments,
     tokens: session.tokens,
     skills: [...session.skills].sort(),
     promptSamples: session.userPrompts.slice(0, 3),
